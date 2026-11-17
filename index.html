@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>War Cove — Candle Commentary (TEST)</title>
+<style>
+  :root{
+    --bg:#07090c; --panel:#0d1117; --panel2:#11161d; --line:#1f2733;
+    --gold:#d8a93b; --gold2:#f0c75e; --ink:#e8e4d8; --dim:#8b93a1;
+    --green:#37d67a; --red:#ff5a5a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:Georgia,'Times New Roman',serif;}
+  body{padding:18px 20px 30px;}
+  header{border:1px solid var(--gold);background:linear-gradient(180deg,#101319,#0a0d11);
+    padding:14px 18px 12px;text-align:center;box-shadow:0 0 0 1px #000, inset 0 0 24px rgba(216,169,59,.07)}
+  h1{margin:0;font-size:30px;letter-spacing:3px;color:var(--gold2);font-weight:normal}
+  .sub{margin-top:4px;font-size:14px;letter-spacing:2px;color:var(--ink)}
+  .testband{margin-top:10px;display:inline-block;border:1px solid var(--red);color:#ffb3b3;
+    padding:4px 14px;font-size:14px;letter-spacing:2px;background:rgba(255,90,90,.08)}
+  .feedline{margin-top:9px;font-size:12.5px;color:var(--dim);letter-spacing:1px}
+  .statusrow{margin-top:8px;font-size:13px;letter-spacing:1px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#555;margin-right:7px;vertical-align:1px}
+  .dot.live{background:var(--green)} .dot.held{background:var(--red)}
+  .controls{margin:16px 0 6px;text-align:center}
+  button{font-family:inherit;font-size:16px;letter-spacing:1px;cursor:pointer;
+    background:#1a212b;color:var(--ink);border:1px solid var(--gold);padding:10px 22px;margin:0 6px}
+  button:hover{background:#232d3a}
+  button.primary{background:#3a2c07;color:var(--gold2)}
+  .voicestate{font-size:13px;color:var(--dim);margin-top:8px;letter-spacing:.5px}
+  .howto{max-width:980px;margin:10px auto 4px;font-size:13.5px;color:var(--dim);
+    text-align:center;line-height:1.5}
+  .grid{margin-top:14px;border:1px solid var(--line)}
+  .frow{display:grid;grid-template-columns:170px 1fr 1fr 1fr;border-bottom:1px solid var(--line)}
+  .frow:last-child{border-bottom:none}
+  .fhead{background:var(--panel2);padding:12px 12px;border-right:1px solid var(--line)}
+  .fhead .fname{font-size:19px;color:var(--gold2);letter-spacing:1px}
+  .fhead .fnext{font-size:12px;color:var(--dim);margin-top:5px;line-height:1.45}
+  .cell{padding:11px 14px;border-right:1px solid var(--line);background:var(--panel);min-height:86px;position:relative}
+  .cell:last-child{border-right:none}
+  .cell .coin{font-size:13px;letter-spacing:2px;color:var(--dim)}
+  .cell .line{font-size:19px;margin-top:4px;line-height:1.3}
+  .cell .meta{font-size:12px;color:var(--dim);margin-top:5px}
+  .cell[data-army="GREEN"] .line{color:var(--green)}
+  .cell[data-army="RED"] .line{color:var(--red)}
+  .cell.held{opacity:.45}
+  .cell .heldtag{display:none;font-size:11px;color:#ffb3b3;border:1px solid var(--red);
+    padding:1px 6px;margin-left:8px;letter-spacing:1px}
+  .cell.held .heldtag{display:inline-block}
+  .cell.speaking{box-shadow:inset 0 0 0 2px var(--gold)}
+  .logwrap{margin-top:18px;border:1px solid var(--line);background:var(--panel)}
+  .logwrap h2{margin:0;padding:9px 14px;font-size:14px;letter-spacing:2px;color:var(--gold2);
+    border-bottom:1px solid var(--line);font-weight:normal;background:var(--panel2)}
+  #log{padding:8px 14px;font-size:14.5px;line-height:1.65;max-height:260px;overflow-y:auto}
+  #log .lt{color:var(--dim);font-size:12.5px;margin-right:9px}
+  #log .skipped{color:var(--dim);font-style:italic}
+  footer{margin-top:14px;text-align:center;font-size:12px;color:var(--dim);letter-spacing:1px;line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+  <h1>WAR COVE — CANDLE COMMENTARY</h1>
+  <div class="sub">THE WITCHING HOUR · DUMP TO THE A.M. PUMP</div>
+  <div><span class="testband">TEST MODE — NOT ON STREAM</span></div>
+  <div class="feedline" id="feedFace">READS LIVE OFF THE BITUNIX TAPE — EVERY READ COMPUTED ON THIS PAGE, OFF THE CANDLES THEMSELVES</div>
+  <div class="statusrow"><span class="dot" id="statusDot"></span><span id="status">WARMING UP — FIRST READ INCOMING…</span>
+    &nbsp;·&nbsp; <span id="clock">— NYC</span></div>
+</header>
+
+<div class="controls">
+  <button class="primary" id="btnTest">🔊 TEST READ — HEAR ALL 21 READS</button>
+  <button id="btnStop">STOP SPEECH</button>
+  <div class="voicestate" id="voiceState">Voice: warming up… (speech arms with your first click — browsers require one)</div>
+</div>
+
+<p class="howto">Leave this page open and it speaks on its own: every time a NEW candle comes out on a frame —
+3 minute, 1 hour, 4 hour, 6 hour, day, week, month — it reads that coin on that frame out loud,
+Litecoin first. The one minute is never read. If a read cannot land fresh, the cell shows HELD and
+nothing is spoken — a stale line is never dressed as live.</p>
+
+<div class="grid" id="grid"></div>
+
+<div class="logwrap">
+  <h2>SPOKEN LOG — WHAT THE COMMENTARY SAID, AND WHEN (NYC)</h2>
+  <div id="log"></div>
+</div>
+
+<footer>
+  WAR COVE · TACTICAL ANALYSIS · PVC — PRICE VS CANDLE · 6H COMMAND · 1H PULSE · 3M EXECUTION<br>
+  Reads: Sierra's gate on the push frames (fresh ground = pushing · littler + pulling back = showing signs of slowing · big-move tier on the 3 minute) ·
+  Sable's spread on the 6 hour, band words off the locked per-coin scales.
+</footer>
+
+<script id="core">
+/* ================================================================
+   WAR COVE CANDLE COMMENTARY — CORE READ LOGIC
+   A line-for-line port of the Day Brief's own gates:
+   - Sierra's 3M gate (privileged SURVEY pass): the run of same-color
+     Heikin-Ashi candles; fresh ground on the run's newest candle =
+     PUSHING, full stop; SLOWING ("pushing but showing signs of
+     slowing") only when NOT progressing AND the newest run candle
+     came out littler than the one before it AND pulling back
+     (littler = smaller AND pulling back — her learned rule 1);
+     the BIG-MOVE tier fires inside pushing on fresh ground, not
+     littler, when the run's travel passes the coin's locked line
+     (her learned rule 2: littler holds the big move back).
+   - The timeframe offices' gate (privileged TIMEFRAME pass): the
+     same mechanical rule on each frame's own series (no big-move
+     tier above the 3M — the offices never carry it).
+   - Sable's 6H spread: live price - the forming 6H Heikin-Ashi
+     candle's close, band word off the locked per-coin scales.
+   Forming candles are built the house way: Bitunix REST klines are
+   closed candles only, so the forming candle is synthesized from
+   the closed sub-candles inside the frame's boundary, closed out
+   by the live ticker price (war_data_engine.build_forming_candle).
+   ================================================================ */
+const WCCore = (() => {
+  const COINS = [
+    { sym: "LTCUSDT", name: "Litecoin", short: "Ł LITECOIN" },
+    { sym: "BTCUSDT", name: "Bitcoin",  short: "₿ BITCOIN" },
+    { sym: "ETHUSDT", name: "Ethereum", short: "Ξ ETHEREUM" },
+  ];
+  // frame key -> bitunix interval, sub interval, sub limit, spoken name, display name
+  const FRAMES = [
+    { key: "3M",    iv: "3m", sub: "1m",  subLimit: 6,   spoken: "Three minute", label: "3 MINUTE" },
+    { key: "1H",    iv: "1h", sub: "3m",  subLimit: 30,  spoken: "One hour",     label: "1 HOUR" },
+    { key: "4H",    iv: "4h", sub: "3m",  subLimit: 90,  spoken: "Four hour",    label: "4 HOUR" },
+    { key: "6H",    iv: "6h", sub: "3m",  subLimit: 130, spoken: "Six hour",     label: "6 HOUR — SABLE" },
+    { key: "DAY",   iv: "1d", sub: "15m", subLimit: 100, spoken: "Day",          label: "DAY" },
+    { key: "WEEK",  iv: "1w", sub: "4h",  subLimit: 60,  spoken: "Week",         label: "WEEK" },
+    { key: "MONTH", iv: "1M", sub: "4h",  subLimit: 200, spoken: "Month",        label: "MONTH" },
+  ];
+  const IV_MS = { "3m": 180000, "1h": 3600000, "4h": 14400000, "6h": 21600000,
+                  "1d": 86400000, "1w": 604800000, "1M": 2592000000 };
+  const BIG_MOVE = { LTCUSDT: 1.0, BTCUSDT: 1000.0, ETHUSDT: 30.0 };
+
+  function heikinAshi(candles) {
+    const out = [];
+    let po = null, pc = null;
+    for (const c of candles) {
+      const close = (c.open + c.high + c.low + c.close) / 4;
+      const open = po === null ? (c.open + c.close) / 2 : (po + pc) / 2;
+      out.push({ time: c.time, open, close,
+                 high: Math.max(c.high, open, close),
+                 low: Math.min(c.low, open, close) });
+      po = open; pc = close;
+    }
+    return out;
+  }
+
+  function boundaryMs(iv, nowMs) {
+    if (nowMs == null) nowMs = Date.now();
+    if (iv === "1M") {
+      const d = new Date(nowMs);
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+    }
+    if (iv === "1w") {
+      const dayMs = 86400000;
+      const dayStart = Math.floor(nowMs / dayMs) * dayMs;
+      const weekday = new Date(dayStart).getUTCDay(); // 0=Sun..6=Sat
+      const sinceMonday = (weekday + 6) % 7;
+      return dayStart - sinceMonday * dayMs;
+    }
+    const secs = { "1d": 86400, "6h": 21600, "4h": 14400, "1h": 3600, "3m": 180 }[iv];
+    return Math.floor(nowMs / (secs * 1000)) * secs * 1000;
+  }
+
+  function buildForming(subs, live, prevClose, iv, nowMs) {
+    const boundary = boundaryMs(iv, nowMs);
+    const inside = subs.filter(c => c.time >= boundary);
+    let open, high, low;
+    if (inside.length) {
+      open = inside[0].open;
+      high = Math.max.apply(null, inside.map(c => c.high).concat([live, open]));
+      low = Math.min.apply(null, inside.map(c => c.low).concat([live, open]));
+    } else {
+      open = prevClose != null ? prevClose : live;
+      high = Math.max(open, live);
+      low = Math.min(open, live);
+    }
+    return { time: boundary, open, high, low, close: live };
+  }
+
+  /* Sierra's gate. Returns {army, state} — state in
+     PUSHING | SLOWING | BIGMOVE | null (indecisive candle). */
+  function gate(haSeries, sym, withBigMove) {
+    const ha = haSeries[haSeries.length - 1];
+    let army = null;
+    if (ha.close > ha.open) army = "Green";
+    else if (ha.close < ha.open) army = "Red";
+    if (!army) return { army: null, state: null };
+    const wantGreen = army === "Green";
+    let run = 0;
+    for (let i = haSeries.length - 1; i >= 0; i--) {
+      const c = haSeries[i];
+      const green = c.close > c.open;
+      if (c.close !== c.open && green === wantGreen) run++;
+      else break;
+    }
+    if (run === 0) run = 1;
+    const rc = haSeries.slice(haSeries.length - run);
+    let progressing;
+    if (rc.length > 1) {
+      progressing = wantGreen
+        ? rc[rc.length - 1].high >= Math.max.apply(null, rc.slice(0, -1).map(c => c.high))
+        : rc[rc.length - 1].low <= Math.min.apply(null, rc.slice(0, -1).map(c => c.low));
+    } else progressing = true;
+    const bodies = rc.map(c => Math.abs(c.close - c.open));
+    let smaller = false, pullingBack = false;
+    if (rc.length >= 2) {
+      smaller = bodies[bodies.length - 1] < bodies[bodies.length - 2];
+      pullingBack = wantGreen
+        ? rc[rc.length - 1].close < rc[rc.length - 2].close
+        : rc[rc.length - 1].close > rc[rc.length - 2].close;
+    }
+    const littler = smaller && pullingBack;
+    const travel = wantGreen
+      ? rc[rc.length - 1].high - rc[0].open
+      : rc[0].open - rc[rc.length - 1].low;
+    let state;
+    if (progressing) state = "PUSHING";
+    else if (smaller && pullingBack) state = "SLOWING";
+    else state = "PUSHING";
+    if (withBigMove && state === "PUSHING" && progressing && !littler &&
+        travel >= (BIG_MOVE[sym] || Infinity)) state = "BIGMOVE";
+    return { army, state, run, progressing, littler, travel };
+  }
+
+  function bandWord(sym, spread) {
+    const a = Math.abs(spread);
+    if (sym === "LTCUSDT") return a < 0.30 ? "a weak move" : (a < 1.00 ? "a cycle" : "the big move");
+    if (sym === "BTCUSDT") return a < 300 ? "quiet" : a < 500 ? "a nice cycle" :
+      a < 800 ? "a move" : a < 1000 ? "a better move" : "big big move";
+    if (sym === "ETHUSDT") return a < 9 ? "quiet" : a < 15 ? "a cycle" :
+      a < 30 ? "a move" : "a big move";
+    return "quiet";
+  }
+
+  function fmtSpreadDisplay(sym, spread) {
+    const sign = spread < 0 ? "−" : "+";
+    if (sym === "LTCUSDT") return sign + Math.round(Math.abs(spread) * 100) + "¢";
+    return sign + "$" + Math.abs(spread).toLocaleString("en-US",
+      { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function spreadFigureSpoken(sym, spread) {
+    const a = Math.abs(spread);
+    if (sym === "LTCUSDT") return Math.round(a * 100) + " cents";
+    if (sym === "BTCUSDT") return Math.round(a) + " dollars";
+    return a < 20 ? a.toFixed(2) + " dollars" : Math.round(a) + " dollars";
+  }
+
+  /* series: {closed:[raw...], forming:raw} per "SYM|FRAMEKEY"; prices: {SYM: live}
+     Returns reads keyed "SYM|FRAMEKEY": {coin, frame, army, display, spoken, formingTime} */
+  function computeReads(prices, series) {
+    const reads = {};
+    for (const coin of COINS) {
+      const live = prices[coin.sym];
+      if (typeof live !== "number" || !isFinite(live)) continue;
+      for (const f of FRAMES) {
+        const s = series[coin.sym + "|" + f.key];
+        if (!s || !s.closed || !s.closed.length || !s.forming) continue;
+        const raw = s.forming.time <= s.closed[s.closed.length - 1].time
+          ? s.closed : s.closed.concat([s.forming]);
+        const ha = heikinAshi(raw);
+        const key = coin.sym + "|" + f.key;
+        if (f.key === "6H") {
+          const candlePrice = ha[ha.length - 1].close;
+          const spread = live - candlePrice;
+          const army = spread >= 0 ? "Green" : "Red";
+          const bw = bandWord(coin.sym, spread);
+          const sign = spread > 0 ? "plus" : (spread < 0 ? "minus" : "flat");
+          const display = army + " Army · spread " + fmtSpreadDisplay(coin.sym, spread) + " · " + bw;
+          const spoken = spread === 0
+            ? coin.name + ". Six hour. Spread flat — " + bw + "."
+            : coin.name + ". Six hour. " + army + " Army. Spread " + sign + " " +
+              spreadFigureSpoken(coin.sym, spread) + " — " + bw + ".";
+          reads[key] = { coin: coin.sym, frame: f.key, army, display, spoken,
+                         formingTime: s.forming.time, live, spread, candlePrice };
+        } else {
+          const g = gate(ha, coin.sym, f.key === "3M");
+          if (!g.army || !g.state) {
+            reads[key] = { coin: coin.sym, frame: f.key, army: null,
+              display: "Candle flat — no army", spoken: null,
+              formingTime: s.forming.time, live };
+            continue;
+          }
+          let display, spoken;
+          if (g.state === "PUSHING") {
+            display = g.army + " Army pushing";
+            spoken = coin.name + ". " + f.spoken + ". " + g.army + " Army pushing.";
+          } else if (g.state === "SLOWING") {
+            display = g.army + " Army pushing but showing signs of slowing";
+            spoken = coin.name + ". " + f.spoken + ". " + g.army + " Army pushing but showing signs of slowing.";
+          } else {
+            const dir = g.army === "Green" ? "upside" : "downside";
+            display = g.army + " Army pushing — big move to the " + dir;
+            spoken = coin.name + ". " + f.spoken + ". " + g.army + " Army pushing — big move to the " + dir + ".";
+          }
+          reads[key] = { coin: coin.sym, frame: f.key, army: g.army, display, spoken,
+                         formingTime: s.forming.time, live,
+                         run: g.run, progressing: g.progressing, littler: g.littler };
+        }
+      }
+    }
+    return reads;
+  }
+
+  return { COINS, FRAMES, IV_MS, heikinAshi, boundaryMs, buildForming, gate,
+           bandWord, fmtSpreadDisplay, computeReads };
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = WCCore;
+</script>
+
+<script>
+/* ================================================================
+   PAGE GLUE — data lanes, panel, speech.
+   DATA LANES (the house pattern, named plain):
+   1) THE TAPE DIRECT — inside a Discord room the calls ride the
+      door (/bx -> Bitunix); anywhere else the page tries Bitunix
+      direct. Bitunix sends no browser permission header, so on
+      the open web / in OBS the direct lane cannot land — exactly
+      the wall the master board documents.
+   2) THE HOUSE RELAY — candles.json, this page's own origin: the
+      house relay on the War Cove machine fetches the raw Bitunix
+      tape server-side (the way every house reader does) and
+      republishes the RAW candles + forming candles + live prices.
+      The relay computes NOTHING — every read is computed here, on
+      this page, off those candles. If the relay goes stale the
+      board shows HELD and nothing stale is ever spoken.
+   ================================================================ */
+const { COINS, FRAMES, IV_MS } = WCCore;
+const IN_DISCORD = window.location.hostname.toLowerCase().endsWith("discordsays.com");
+const BX_BASE = IN_DISCORD ? "/bx" : "https://fapi.bitunix.com";
+const nycTime = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York",
+  hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
+const nycClock = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York",
+  weekday: "short", month: "short", day: "numeric", hour: "numeric",
+  minute: "2-digit", second: "2-digit", hour12: true });
+
+const series = {};       // "SYM|FRAME" -> {closed, forming, updatedAt}
+const prices = {};       // SYM -> live
+const primedForming = {}; // "SYM|FRAME" -> formingTime baseline (silent prime)
+let reads = {};
+let laneMode = "warming"; // direct | relay
+let relayAt = 0;
+let directDead = false;
+
+/* ---------- direct lane ---------- */
+async function bxFetch(path) {
+  const r = await fetch(BX_BASE + path);
+  if (!r.ok) throw new Error("bitunix http " + r.status);
+  const j = await r.json();
+  if (!j || j.code !== 0) throw new Error("bitunix payload");
+  return j.data;
+}
+async function directTickers() {
+  const rows = await bxFetch("/api/v1/futures/market/tickers");
+  for (const row of rows) {
+    if (COINS.some(c => c.sym === row.symbol)) {
+      const p = parseFloat(row.lastPrice);
+      if (isFinite(p)) prices[row.symbol] = p;
+    }
+  }
+}
+async function directKlines(sym, iv, limit) {
+  const data = await bxFetch("/api/v1/futures/market/kline?symbol=" + sym +
+    "&interval=" + iv + "&limit=" + limit);
+  return data.map(k => ({ time: +k.time, open: +k.open, high: +k.high,
+    low: +k.low, close: +k.close })).reverse();
+}
+async function directLane(frameKeys) {
+  await directTickers();
+  const subCache = {}; // "SYM|subIv|limit" -> candles
+  const jobs = [];
+  for (const coin of COINS) {
+    for (const f of FRAMES) {
+      if (!frameKeys.includes(f.key)) continue;
+      jobs.push((async () => {
+        const closed = await directKlines(coin.sym, f.iv, 60);
+        const subKey = coin.sym + "|" + f.sub + "|" + f.subLimit;
+        if (!subCache[subKey]) subCache[subKey] = await directKlines(coin.sym, f.sub, f.subLimit);
+        const live = prices[coin.sym];
+        if (typeof live !== "number") return;
+        const forming = WCCore.buildForming(subCache[subKey], live,
+          closed[closed.length - 1].close, f.iv);
+        series[coin.sym + "|" + f.key] = { closed, forming, updatedAt: Date.now() };
+      })().catch(() => {}));
+    }
+  }
+  await Promise.all(jobs);
+}
+
+/* ---------- relay lane ---------- */
+async function relayLane() {
+  const r = await fetch("candles.json?cb=" + Date.now());
+  if (!r.ok) throw new Error("relay http " + r.status);
+  const j = await r.json();
+  if (!j || !j.series || !j.prices) throw new Error("relay payload");
+  relayAt = j.at || 0;
+  for (const sym in j.prices) prices[sym] = j.prices[sym];
+  for (const key in j.series) {
+    const s = j.series[key];
+    const closed = s.closed.map(a => ({ time: a[0], open: a[1], high: a[2], low: a[3], close: a[4] }));
+    const fa = s.forming;
+    const forming = { time: fa[0], open: fa[1], high: fa[2], low: fa[3], close: fa[4] };
+    series[key] = { closed, forming, updatedAt: relayAt };
+  }
+}
+
+/* ---------- panel ---------- */
+const cells = {};
+(function buildGrid() {
+  const grid = document.getElementById("grid");
+  for (const f of FRAMES) {
+    const row = document.createElement("div");
+    row.className = "frow";
+    const head = document.createElement("div");
+    head.className = "fhead";
+    head.innerHTML = '<div class="fname"></div><div class="fnext"></div>';
+    head.querySelector(".fname").textContent = f.label;
+    row.appendChild(head);
+    cells["head|" + f.key] = head.querySelector(".fnext");
+    for (const coin of COINS) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.innerHTML = '<div class="coin"></div><div class="line">READING…</div><div class="meta"></div>';
+      cell.querySelector(".coin").innerHTML = coin.short +
+        '<span class="heldtag">HELD</span>';
+      row.appendChild(cell);
+      cells[coin.sym + "|" + f.key] = {
+        el: cell, line: cell.querySelector(".line"), meta: cell.querySelector(".meta") };
+    }
+    grid.appendChild(row);
+  }
+})();
+
+const HELD_MS = { "3M": 30000, "1H": 150000, "4H": 150000, "6H": 150000,
+                  "DAY": 300000, "WEEK": 300000, "MONTH": 300000 };
+function isHeld(key) {
+  const s = series[key];
+  if (!s) return true;
+  const frame = key.split("|")[1];
+  const basis = laneMode === "relay" ? relayAt : s.updatedAt;
+  return Date.now() - basis > HELD_MS[frame];
+}
+
+function fmtPrice(v) {
+  return "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function nextRollIn(frameKey) {
+  const f = FRAMES.find(x => x.key === frameKey);
+  const b = WCCore.boundaryMs(f.iv);
+  const next = frameKey === "MONTH"
+    ? (() => { const d = new Date(); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1); })()
+    : b + IV_MS[f.iv];
+  const secs = Math.max(0, Math.round((next - Date.now()) / 1000));
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  return (h > 0 ? h + "h " : "") + (h > 0 || m > 0 ? m + "m " : "") + s + "s";
+}
+
+function render() {
+  reads = WCCore.computeReads(prices, series);
+  let anyLive = false;
+  for (const f of FRAMES) {
+    cells["head|" + f.key].textContent = "next candle in " + nextRollIn(f.key);
+    for (const coin of COINS) {
+      const key = coin.sym + "|" + f.key;
+      const c = cells[key];
+      const r = reads[key];
+      const held = isHeld(key);
+      c.el.classList.toggle("held", held);
+      if (r) {
+        c.line.textContent = r.display;
+        c.el.dataset.army = r.army || "";
+        c.meta.textContent = "live " + fmtPrice(r.live) + " · read " + nycTime.format(new Date()) + " NYC";
+        if (!held) anyLive = true;
+      } else {
+        c.line.textContent = "READING…";
+        c.meta.textContent = "";
+      }
+    }
+  }
+  const dot = document.getElementById("statusDot");
+  const st = document.getElementById("status");
+  dot.className = "dot " + (anyLive ? "live" : "held");
+  const laneName = laneMode === "direct"
+    ? (IN_DISCORD ? "BITUNIX TAPE — THROUGH THE DOOR" : "BITUNIX TAPE — DIRECT")
+    : "BITUNIX TAPE — HOUSE RELAY (RAW CANDLES)";
+  st.textContent = anyLive
+    ? "● LIVE — " + laneName + " · TAPE AS OF " +
+      nycTime.format(new Date(laneMode === "relay" ? relayAt : Date.now())) + " NYC"
+    : "HELD — WAITING ON A FRESH READ…";
+}
+
+/* ---------- speech ---------- */
+const speechQ = [];
+let speaking = false, voiceArmed = false, chosenVoice = null, watchdog = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+  chosenVoice = vs.find(v => /google us english/i.test(v.name)) ||
+                vs.find(v => v.lang === "en-US") ||
+                vs.find(v => v.lang === "en-GB") || vs[0] || null;
+  document.getElementById("voiceState").textContent =
+    "Voice: " + (chosenVoice ? chosenVoice.name + " (" + chosenVoice.lang + ")" : "system default") +
+    (voiceArmed ? " · ARMED" : " · click TEST READ once to arm the voice");
+}
+if ("speechSynthesis" in window) {
+  speechSynthesis.onvoiceschanged = pickVoice;
+  pickVoice();
+}
+function logLine(text, skipped) {
+  const log = document.getElementById("log");
+  const div = document.createElement("div");
+  if (skipped) div.className = "skipped";
+  div.innerHTML = '<span class="lt"></span>';
+  div.querySelector(".lt").textContent = nycTime.format(new Date()) + " NYC";
+  div.appendChild(document.createTextNode(text));
+  log.prepend(div);
+  while (log.children.length > 60) log.removeChild(log.lastChild);
+}
+function highlightCell(key) {
+  const c = cells[key];
+  if (!c) return;
+  c.el.classList.add("speaking");
+  setTimeout(() => c.el.classList.remove("speaking"), 6000);
+}
+function speakNext() {
+  if (speaking || !speechQ.length) return;
+  const item = speechQ.shift();
+  speaking = true;
+  highlightCell(item.key);
+  logLine(item.text, false);
+  const u = new SpeechSynthesisUtterance(item.text);
+  if (chosenVoice) u.voice = chosenVoice;
+  u.rate = 0.97; u.pitch = 0.95;
+  const est = Math.max(2500, item.text.split(/\s+/).length * 480 + 1600);
+  const done = () => {
+    if (!speaking) return;
+    speaking = false;
+    if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+    setTimeout(speakNext, 250);
+  };
+  u.onend = done; u.onerror = done;
+  watchdog = setTimeout(done, est);
+  try { speechSynthesis.speak(u); } catch (e) { done(); }
+}
+function enqueue(text, key) {
+  if (!text) return;
+  speechQ.push({ text, key });
+  speakNext();
+}
+document.getElementById("btnStop").addEventListener("click", () => {
+  speechQ.length = 0;
+  try { speechSynthesis.cancel(); } catch (e) {}
+  speaking = false;
+  if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+  logLine("Speech stopped by hand.", true);
+});
+document.getElementById("btnTest").addEventListener("click", () => {
+  voiceArmed = true; pickVoice();
+  render();
+  let n = 0;
+  const order = ["MONTH", "WEEK", "DAY", "6H", "4H", "1H", "3M"];
+  for (const fk of order) {
+    for (const coin of COINS) {
+      const key = coin.sym + "|" + fk;
+      const r = reads[key];
+      if (r && r.spoken && !isHeld(key)) { enqueue(r.spoken, key); n++; }
+      else logLine(coin.name + " · " + fk + " — HELD, not spoken (no fresh read).", true);
+    }
+  }
+  if (!n) logLine("No fresh reads yet — the tape is still warming up.", true);
+});
+
+/* ---------- roll detection ---------- */
+const SPEAK_ORDER = { MONTH: 0, WEEK: 1, DAY: 2, "6H": 3, "4H": 4, "1H": 5, "3M": 6 };
+function detectRolls() {
+  const fired = [];
+  for (const key in reads) {
+    const r = reads[key];
+    const prev = primedForming[key];
+    if (prev == null) { primedForming[key] = r.formingTime; continue; } // silent prime
+    if (r.formingTime !== prev) {
+      primedForming[key] = r.formingTime;
+      if (!isHeld(key) && r.spoken) fired.push(r);
+    }
+  }
+  fired.sort((a, b) =>
+    (SPEAK_ORDER[a.frame] - SPEAK_ORDER[b.frame]) ||
+    (COINS.findIndex(c => c.sym === a.coin) - COINS.findIndex(c => c.sym === b.coin)));
+  for (const r of fired) enqueue(r.spoken, r.coin + "|" + r.frame);
+}
+
+/* ---------- main loops ---------- */
+async function cycle(frameKeys) {
+  if (!directDead) {
+    try {
+      await directLane(frameKeys);
+      laneMode = "direct";
+      render(); detectRolls();
+      return;
+    } catch (e) {
+      if (!IN_DISCORD) directDead = true; // open web: the tape sends no browser permission — go relay
+    }
+  }
+  try {
+    await relayLane();
+    laneMode = "relay";
+    render(); detectRolls();
+  } catch (e) {
+    render(); // keep standing reads; HELD takes over as data ages
+  }
+}
+function tickClock() {
+  document.getElementById("clock").textContent = nycClock.format(new Date()) + " · NYC";
+}
+tickClock(); setInterval(tickClock, 1000);
+setInterval(render, 5000); // countdowns + HELD aging stay honest between fetches
+
+/* First pass: everything, primed silently. Then the lanes settle
+   into their rhythm: 3M fast, mid frames steady, slow frames slow. */
+(async () => {
+  await cycle(["3M", "1H", "4H", "6H", "DAY", "WEEK", "MONTH"]);
+  setInterval(() => cycle(["3M"]), 5000);
+  setInterval(() => cycle(["1H", "4H", "6H"]), 20000);
+  setInterval(() => cycle(["DAY", "WEEK", "MONTH"]), 60000);
+})();
+</script>
+</body>
+</html>
