@@ -657,28 +657,19 @@ async function stockLane() {
 }
 
 /* ---------- SABLE'S LINE — read out of Sable's room ----------
-   The figure is the relay's sable block: the master copy's own
-   computation (HA over the feed's 6h klines x60, spread = live -
-   last HA close), in the master's own lane for where this page
-   stands — Binance lane on the open web, Bitunix lane inside
-   Discord, exactly as the master itself runs. Calla computes NO
-   spread of her own; if Sable's figure is not fresh, the spread
-   is HELD and she says nothing rather than a number of her own. */
+   The figure is the relay's sable block: Sable's own computation
+   the Bitunix way (HA over Bitunix 6h klines x60, spread = live
+   Bitunix price - last HA close). BITUNIX ONLY — Warlord's order,
+   Nov 17, 2026: there is no other lane, no other door, and no
+   fallback figure. Calla computes NO spread of her own; if
+   Sable's Bitunix figure is not fresh, the spread is HELD and
+   she says nothing rather than a number of her own. */
 function sableEntry(sym) {
   if (!sableData) return null;
-  // Sable's room has two doors: Binance (her open-web face) and
-  // Bitunix (her Discord-room face). Her mode's door governs; if
-  // that door's figure has gone stale, the other door's FRESH
-  // figure is still Sable's room talking — she goes HELD only
-  // when neither door carries a fresh figure.
-  const want = IN_DISCORD ? "bitunix" : "binance";
-  const other = want === "binance" ? "bitunix" : "binance";
-  for (const lane of [want, other]) {
-    const block = sableData[lane];
-    if (!block || Date.now() - (block.at || 0) > 180000) continue;
-    const e = (block.coins || {})[sym];
-    if (e && typeof e.spread === "number") return e;
-  }
+  const block = sableData.bitunix;
+  if (!block || Date.now() - (block.at || 0) > 180000) return null;
+  const e = (block.coins || {})[sym];
+  if (e && typeof e.spread === "number") return e;
   return null;
 }
 function spreadLineFor(sym) {
