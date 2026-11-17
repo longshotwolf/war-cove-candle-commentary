@@ -117,6 +117,7 @@
   <div id="tickerRow" style="display:none"></div>
   <div class="lbl">HER VOICE</div>
   <button id="btnVoice" class="on">VOICE ON</button>
+  <button id="btnVoiceMode" class="on">HER VOICE: ARIA — HOUSE TTS</button>
   <button id="btnTest" class="primary">🔊 TEST READ — FULL RUNDOWN</button>
   <button id="btnStop">STOP SPEECH</button>
   <div class="connline" id="connLine">CONNECTION — THE MASTER COPY · STANDING ON LITECOIN</div>
@@ -129,7 +130,10 @@ the timeframe candles as each new candle comes out (1 hour · 4 hour · 6 hour �
 1-minute), and Sable's 6-hour spread stated in its own band word. Every new candle gets read, even if the read
 is the same as the last one. When price hits a temp top or bottom on the month, week or day, she breaks in with
 the whole line — “Temp bottom on the month. Long the bottom, short the top.” — and the card flashes green on a
-bottom, red on a top. A read that cannot land fresh shows HELD and is never spoken stale.</p>
+bottom, red on a top. A read that cannot land fresh shows HELD and is never spoken stale. Her voice is ARIA —
+the house TTS lane, his locked pick: her live cadence and her standing room files are spoken in Aria's voice
+off the house machine (they stand on Litecoin · Day Brief, her home seat); flip HER VOICE to DEVICE to preview
+any subject in the browser's own voice.</p>
 
 <div class="subjhead">
   <span class="sname" id="subjName">Ł LITECOIN</span>
@@ -144,7 +148,7 @@ bottom, red on a top. A read that cannot land fresh shows HELD and is never spok
 </div>
 
 <div class="surveybox">
-  <div class="lbl">COMMANDS — BY HAND ONLY, THE WAY A TRADE IS FIRED: !survey LTC · !sable · !sierra · !terra · !vega</div>
+  <div class="lbl">COMMANDS — BY HAND ONLY, THE WAY A TRADE IS FIRED: !survey LTC · !sable · !sierra · !terra · !vega · !hera !cora !juno !dia !sela !mona (THE ONE-MINUTE IS NEVER A COMMAND)</div>
   <input id="surveyInput" type="text" placeholder="!survey LTC  ·  !vega" autocomplete="off">
   <button id="btnSurvey">FIRE COMMAND</button>
 </div>
@@ -662,10 +666,20 @@ async function stockLane() {
    is HELD and she says nothing rather than a number of her own. */
 function sableEntry(sym) {
   if (!sableData) return null;
-  const lane = IN_DISCORD ? "bitunix" : "binance";
-  const block = sableData[lane];
-  if (!block || Date.now() - (block.at || 0) > 180000) return null;
-  return (block.coins || {})[sym] || null;
+  // Sable's room has two doors: Binance (her open-web face) and
+  // Bitunix (her Discord-room face). Her mode's door governs; if
+  // that door's figure has gone stale, the other door's FRESH
+  // figure is still Sable's room talking — she goes HELD only
+  // when neither door carries a fresh figure.
+  const want = IN_DISCORD ? "bitunix" : "binance";
+  const other = want === "binance" ? "bitunix" : "binance";
+  for (const lane of [want, other]) {
+    const block = sableData[lane];
+    if (!block || Date.now() - (block.at || 0) > 180000) continue;
+    const e = (block.coins || {})[sym];
+    if (e && typeof e.spread === "number") return e;
+  }
+  return null;
 }
 function spreadLineFor(sym) {
   const e = sableEntry(sym);
@@ -769,16 +783,114 @@ function speakNext() {
 }
 function enqueue(text, key, cls) {
   if (!text) return;
+  if (voiceMode === "aria" && ariaSubjectHome()) return; // her cadence rides the Aria playlist
   speechQ.push({ text, key, cls });
   speakNext();
 }
 function enqueueAlert(text, key) {
   if (!text) return;
+  if (voiceMode === "aria" && ariaSubjectHome()) return;
   speechQ.unshift({ text, key, cls: "alert" });  // jumps the queue; never cuts a line mid-sentence
   speakNext();
 }
+
+/* ---------- ARIA — her locked voice (house TTS lane) ----------
+   Her voice is avocado_v2:MAI_01 "Aria", locked by the Warlord's
+   ears. A page cannot run the house TTS lane, so the speaking is
+   done on the house machine: the relay's speaker thread composes
+   her lines off the same payloads, synthesizes them in Aria's
+   voice, and publishes speech.json + speech/<id>.mp3 here. In
+   ARIA mode this page plays that audio: her live cadence off the
+   live playlist, the standing rundown on TEST READ, and the room
+   files on named commands. Her standing files stand on her home
+   seat — Litecoin, Day Brief — stated plain on the page; any
+   other subject previews in the DEVICE voice instead. */
+let voiceMode = "aria"; // aria | device
+let speechDoc = null;
+const playedLive = new Set();
+let livePrimed = false;
+const audioQ = [];
+let audioPlaying = false;
+const audioEl = new Audio();
+function ariaSubjectHome() { return boardMode === "daybrief" && selCoin === "LTCUSDT"; }
+async function fetchSpeech() {
+  try {
+    const r = await fetch("speech.json?cb=" + Date.now());
+    if (!r.ok) return speechDoc;
+    speechDoc = await r.json();
+    return speechDoc;
+  } catch (e) { return speechDoc; }
+}
+function roomEntries(name) {
+  if (!speechDoc) return null;
+  const ids = (speechDoc.rooms || {})[name];
+  if (!ids || !ids.length) return null;
+  const out = [];
+  for (const id of ids) {
+    const it = (speechDoc.items || {})[id];
+    if (it && it.text) out.push({ file: "speech/" + id + ".mp3", text: it.text });
+  }
+  return out.length ? out : null;
+}
+function ariaRoom(name) {
+  if (voiceMode !== "aria" || !ariaSubjectHome()) return false;
+  const entries = roomEntries(name);
+  if (!entries) return false;
+  playAudioSeq(entries);
+  logLine("— in Aria's voice, from her room file —", "skipped");
+  return true;
+}
+function playAudioSeq(entries) {
+  for (const en of entries) audioQ.push(en);
+  pumpAudio();
+}
+function pumpAudio() {
+  if (audioPlaying || !audioQ.length) return;
+  const en = audioQ.shift();
+  audioPlaying = true;
+  setNowReading(en.text);
+  logLine(en.text, en.cls || "");
+  highlightCell(en.key);
+  audioEl.src = en.file;
+  let advanced = false;
+  const next = () => {
+    if (advanced) return;
+    advanced = true;
+    audioPlaying = false;
+    setTimeout(pumpAudio, 250);
+  };
+  audioEl.onended = next;
+  audioEl.onerror = next;
+  setTimeout(next, 45000); // a stuck file never wedges her voice
+  audioEl.play().catch(next);
+}
+async function speechPoll() {
+  const doc = await fetchSpeech();
+  if (!doc) return;
+  const live = doc.live || [];
+  if (!livePrimed) {
+    for (const id of live) playedLive.add(id);  // silent prime on load
+    livePrimed = true;
+    return;
+  }
+  if (voiceMode !== "aria" || !voiceOn) return;
+  for (const id of live) {
+    if (playedLive.has(id)) continue;
+    playedLive.add(id);
+    const it = (doc.items || {})[id];
+    if (!it || !it.text) continue;
+    if (Date.now() - (it.at || 0) > 600000) continue; // never replay old cadence
+    audioQ.push({ file: "speech/" + id + ".mp3", text: it.text,
+                  cls: /^Temp /.test(it.text) ? "alert" : "" });
+  }
+  pumpAudio();
+}
+setInterval(speechPoll, 5000);
 document.getElementById("btnStop").addEventListener("click", () => {
   speechQ.length = 0;
+  audioQ.length = 0;
+  try { audioEl.pause(); } catch (e) {}
+  audioPlaying = false;
   try { speechSynthesis.cancel(); } catch (e) {}
   speaking = false;
   if (watchdog) { clearTimeout(watchdog); watchdog = null; }
@@ -1111,8 +1223,32 @@ function checkRolls() {
 }
 
 /* ---------- TEST READ — the full rundown, on demand ---------- */
-document.getElementById("btnTest").addEventListener("click", () => {
+document.getElementById("btnVoiceMode").addEventListener("click", async (ev) => {
+  voiceMode = voiceMode === "aria" ? "device" : "aria";
+  ev.target.classList.toggle("on", voiceMode === "aria");
+  ev.target.textContent = voiceMode === "aria" ? "HER VOICE: ARIA — HOUSE TTS" : "HER VOICE: DEVICE";
+  if (voiceMode === "aria") {
+    await fetchSpeech();
+    if (speechDoc) for (const id of speechDoc.live || []) playedLive.add(id);
+    livePrimed = true;
+    logLine("Her voice: ARIA — the house TTS lane (avocado_v2:MAI_01), his locked pick. " +
+      "Her standing files stand on Litecoin · Day Brief; other subjects preview in the device voice.", "skipped");
+  } else {
+    logLine("Her voice: the device voice (preview lane).", "skipped");
+  }
+});
+document.getElementById("btnTest").addEventListener("click", async () => {
   voiceArmed = true; pickVoice();
+  if (voiceMode === "aria" && ariaSubjectHome()) {
+    await fetchSpeech();
+    const entries = roomEntries("rundown");
+    if (entries) {
+      logLine("TEST READ — Aria reads the standing rundown (Litecoin · Day Brief).", "skipped");
+      playAudioSeq(entries);
+      return;
+    }
+    logLine("Aria's rundown file has not landed yet — previewing in the device voice.", "skipped");
+  }
   render();
   const subj = subjectName();
   let n = 0;
@@ -1168,6 +1304,7 @@ function fireSurvey() {
   const tok = m[1].toUpperCase();
   const coin = COINS.find(c => c.sym === tok + "USDT");
   if (coin) {
+    if (ariaRoom("survey_" + tok)) return;
     render();
     const lines = WCCore.surveyFor(coin, prices, series);
     if (!lines.length) { logLine("Survey held — no fresh tape for " + coin.name + ".", "skipped"); return; }
@@ -1203,40 +1340,69 @@ function fireSurvey() {
    !sierra         Sierra reads her room: the standing 3M read
    !terra          Terra reads her room: the temp bottoms she watches
    !vega           Vega reads her room: the temp tops she watches
+   !hera !cora !juno !dia !sela !mona — the timeframe offices read
+   their standing candle (1H · 4H · 6H · DAY · WEEK · MONTH); the
+   frame words answer too (!1h !4h !6h !day !week !month).
+   !mina is NEVER a command — the one-minute office is never read
+   on command, by his word, named twice. The command is refused in
+   the log and nothing is spoken.
    One command, one bot, her room's current read, voiced once —
-   never constant, only on command. The room reads name the subject
-   on her switch (coin or ticker). */
+   never constant, only on command. */
+const OFFICE_CMD = { hera: "1H", cora: "4H", juno: "6H", dia: "DAY",
+  sela: "WEEK", mona: "MONTH", "1h": "1H", "4h": "4H", "6h": "6H",
+  day: "DAY", week: "WEEK", month: "MONTH" };
+function frameReadLine(fk) {
+  const subj = subjectName();
+  if (boardMode === "daybrief") {
+    const r = reads[selCoin + "|" + fk];
+    if (r && r.spoken && !cryptoHeld(selCoin + "|" + fk)) return r.spoken;
+    return null;
+  }
+  const sr = stockReads();
+  const r = sr[fk];
+  const t = WCStock.TICKERS.find(x => x.ticker === selTicker);
+  const f = WCStock.FRAMES.find(x => x.key === fk);
+  if (r && !r.held && f) return t.name + ". " + f.spoken + ". " + WCStock.titleCall(r.call) + ".";
+  return null;
+}
 function fireBotCommand(bot) {
   voiceArmed = true; pickVoice();
   render();
   const subj = subjectName();
+  if (bot === "mina") {
+    logLine("Mina's one-minute room is never read on command — his word. Nothing spoken.", "skipped");
+    return;
+  }
+  if (OFFICE_CMD[bot]) {
+    const fk = OFFICE_CMD[bot];
+    if (ariaRoom(fk)) return;
+    const line = frameReadLine(fk);
+    if (line) enqueue(line, fk);
+    else logLine(fk + " office — HELD (no fresh read standing).", "skipped");
+    return;
+  }
   if (bot === "sable") {
     if (boardMode !== "daybrief") {
       logLine("Sable's room stands on the Day Brief side — no spread office on the stock side.", "skipped");
       return;
     }
+    if (ariaRoom("sable")) return;
     const sl = spreadLineFor(selCoin);
     if (sl) enqueue(sl.spoken, "SPREAD");
     else logLine("Sable — HELD (her room figure has not landed fresh).", "skipped");
     return;
   }
   if (bot === "sierra") {
-    if (boardMode === "daybrief") {
-      const r = reads[selCoin + "|3M"];
-      if (r && r.spoken && !cryptoHeld(selCoin + "|3M")) enqueue(r.spoken, "3M");
-      else logLine("Sierra — HELD (no fresh 3-minute read).", "skipped");
-    } else {
-      const sr = stockReads();
-      const r = sr["3M"];
-      const t = WCStock.TICKERS.find(x => x.ticker === selTicker);
-      if (r && !r.held) enqueue(t.name + ". Three minute. " + WCStock.titleCall(r.call) + ".", "3M");
-      else logLine("Sierra — HELD (no fresh 3-minute read).", "skipped");
-    }
+    if (ariaRoom("sierra")) return;
+    const line = frameReadLine("3M");
+    if (line) enqueue(line, "3M");
+    else logLine("Sierra — HELD (no fresh 3-minute read).", "skipped");
     return;
   }
   // terra (bottoms) / vega (tops): her room's standing levels on
   // MONTH · WEEK · DAY, in her order — a level price is sitting on
   // is called as a hit, in her hit shape: "Temp top. Litecoin. Hit 51.71."
+  if (ariaRoom(bot)) return;
   const side = bot === "terra" ? "bottom" : "top";
   const temps = currentTemps();
   let spoke = 0;
@@ -1259,7 +1425,7 @@ function fireBotCommand(bot) {
 }
 function fireCommand() {
   const raw = document.getElementById("surveyInput").value.trim();
-  const bot = raw.match(/^\W*(sable|sierra|terra|vega)\b/i);
+  const bot = raw.match(/^\W*(sable|sierra|terra|vega|hera|cora|juno|dia|sela|mona|mina|1h|4h|6h|day|week|month)\b/i);
   if (bot) { fireBotCommand(bot[1].toLowerCase()); return; }
   fireSurvey();
 }
