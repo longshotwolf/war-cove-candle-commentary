@@ -369,11 +369,22 @@ const WCCore = (() => {
           const bw = bandWord(coin.sym, spread);
           read.spread = spread; read.candlePrice = candlePrice;
           read.spreadArmy = spread >= 0 ? "Green" : "Red";
-          read.spreadDisplay = "Spread " + fmtSpreadDisplay(coin.sym, spread) + " · " + bw;
+          /* SABLE'S LINE, relayed in Sable's words — her figure, her
+             direction, her band word, exactly as her room states it:
+             "LTC six hour spread — one cent to the downside, a weak
+             move." Computed by Sable's own pass logic (the Day Brief
+             spread window's method, ported line-for-line), so the
+             figure she relays is Sable's figure. */
+          const short3 = coin.sym.replace("USDT", "");
+          const dirWord = spread < 0 ? "downside" : "upside";
+          read.spreadDisplay = spread === 0
+            ? "Six hour spread — flat · " + bw
+            : "Six hour spread — " + fmtSpreadDisplay(coin.sym, spread) +
+              " to the " + dirWord + " · " + bw;
           read.spreadSpoken = spread === 0
-            ? coin.name + " spread is flat — " + bw + "."
-            : coin.name + " spread is " + (spread < 0 ? "minus " : "plus ") +
-              spreadFigureSpoken(coin.sym, spread) + " — " + bw + ".";
+            ? short3 + " six hour spread — flat, " + bw + "."
+            : short3 + " six hour spread — " + spreadFigureSpoken(coin.sym, spread) +
+              " to the " + dirWord + ", " + bw + ".";
         }
         reads[key] = read;
       }
@@ -909,13 +920,13 @@ function render() {
     const d = stockData[selTicker];
     const sr = stockReads();
     const open = marketOpenNow();
-    const staleFeed = !stocksAt || Date.now() - stocksAt > 300000;
+    const staleFeed = !d || Date.now() - d.fat > 300000;
     document.getElementById("subjPrice").textContent = d ? fmtPrice(d.price) : "—";
     document.getElementById("subjState").textContent = open
-      ? "MARKET OPEN · NASDAQ/YAHOO TAPE VIA THE HOUSE RELAY · AS OF " +
-        nycTime.format(new Date(stocksAt)) + " NYC"
+      ? "MARKET OPEN · THE STOCK BOARD'S TAPE VIA THE HOUSE RELAY · AS OF " +
+        nycTime.format(new Date(d ? d.fat : stocksAt)) + " NYC"
       : "MARKET CLOSED — LAST SESSION READS · AS OF " +
-        nycTime.format(new Date(stocksAt || Date.now())) + " NYC";
+        nycTime.format(new Date(d ? d.fat : (stocksAt || Date.now()))) + " NYC";
     for (const f of WCStock.FRAMES) {
       const c = cells[f.key];
       const r = sr[f.key];
@@ -1027,17 +1038,21 @@ function checkRolls() {
     }
     fired.sort((a, b) => SPEAK_ORDER[a.frame] - SPEAK_ORDER[b.frame]);
     if (voiceOn) for (const r of fired) {
-      enqueue(r.spoken, r.frame);
+      // His final correction: the SPREAD COMES FIRST — on a 6H turn
+      // Sable's line rides ahead of the 6H candle's own line.
       if (r.frame === "6H" && r.spreadSpoken) enqueue(r.spreadSpoken, "SPREAD");
+      enqueue(r.spoken, r.frame);
     }
   } else {
     if (!marketOpenNow()) { rollsPrimed = true; return; }
     const sr = stockReads();
+    const sd = stockData[selTicker];
+    const primeOnly = !rollsPrimed || !sd || Date.now() - sd.fat > 300000;
     for (const f of WCStock.FRAMES) {
       const r = sr[f.key];
       if (!r || r.held) continue;
       const pk = subj.key + "|" + f.key;
-      if (!rollsPrimed || primedForming[pk] == null) { primedForming[pk] = r.barTime; continue; }
+      if (primeOnly || primedForming[pk] == null) { primedForming[pk] = r.barTime; continue; }
       if (r.barTime !== primedForming[pk]) {
         primedForming[pk] = r.barTime;
         const t = WCStock.TICKERS.find(x => x.ticker === selTicker);
@@ -1059,12 +1074,17 @@ document.getElementById("btnTest").addEventListener("click", () => {
   let n = 0;
   const order = ["3M", "1H", "4H", "6H", "DAY", "WEEK", "MONTH"];
   if (boardMode === "daybrief") {
+    // His final correction: THE SPREAD COMES FIRST — then the 3M,
+    // then the frames in order.
+    const r6 = reads[selCoin + "|6H"];
+    if (r6 && r6.spreadSpoken && !cryptoHeld(selCoin + "|6H")) {
+      enqueue(r6.spreadSpoken, "SPREAD"); n++;
+    }
     for (const fk of order) {
       const key = selCoin + "|" + fk;
       const r = reads[key];
       if (r && r.spoken && !cryptoHeld(key)) {
         enqueue(r.spoken, fk); n++;
-        if (fk === "6H" && r.spreadSpoken) { enqueue(r.spreadSpoken, "SPREAD"); n++; }
       } else logLine(subj.name + " · " + fk + " — HELD, not spoken (no fresh read).", "skipped");
     }
   } else {
@@ -1213,7 +1233,12 @@ async function cryptoCycle(frameKeys) {
 async function stockCycle() {
   try {
     await stockLane();
-    if (boardMode === "stock") { render(); checkRolls(); checkTemps(voiceOn && marketOpenNow()); }
+    if (boardMode === "stock") {
+      render(); checkRolls();
+      const sd = stockData[selTicker];
+      const fresh = sd && Date.now() - sd.fat <= 300000;
+      checkTemps(voiceOn && marketOpenNow() && !!fresh);
+    }
   } catch (e) { /* standing data ages honestly */ }
 }
 function tickClock() {
