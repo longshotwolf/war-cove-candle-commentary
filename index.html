@@ -406,7 +406,7 @@ async function relayLane() {
     const closed = s.closed.map(a => ({ time: a[0], open: a[1], high: a[2], low: a[3], close: a[4] }));
     const fa = s.forming;
     const forming = { time: fa[0], open: fa[1], high: fa[2], low: fa[3], close: fa[4] };
-    series[key] = { closed, forming, updatedAt: relayAt };
+    series[key] = { closed, forming, updatedAt: s.fat || relayAt };
   }
 }
 
@@ -443,8 +443,7 @@ function isHeld(key) {
   const s = series[key];
   if (!s) return true;
   const frame = key.split("|")[1];
-  const basis = laneMode === "relay" ? relayAt : s.updatedAt;
-  return Date.now() - basis > HELD_MS[frame];
+  return Date.now() - s.updatedAt > HELD_MS[frame];
 }
 
 function fmtPrice(v) {
