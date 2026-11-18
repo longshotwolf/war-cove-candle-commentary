@@ -804,11 +804,41 @@ const audioQ = [];
 let audioPlaying = false;
 const audioEl = new Audio();
 function ariaSubjectHome() { return boardMode === "daybrief" && selCoin === "LTCUSDT"; }
+/* SPEECH FAST LANE — the Pages copy of speech.json trails her
+   speaker by the Pages build queue (measured 1.5–5 minutes on
+   Nov 18, 2026 — a full 3M candle, so this page was structurally
+   one candle behind). Her speaker also serves the same playlist
+   off the house machine through a direct tunnel; the keeper
+   publishes the tunnel's address as speech-endpoint.json here.
+   This page tries the tunnel first (short timeout) and falls
+   back to the Pages copy on any failure. Cadence items carry
+   their candle's expiry (exp): a line that lands after its
+   candle rolled is dropped, never spoken as current. */
+let laneBase = null, liveBase = "";
+async function discoverLane() {
+  try {
+    const r = await fetch("speech-endpoint.json?cb=" + Date.now());
+    const j = await r.json();
+    if (j && j.endpoint) laneBase = String(j.endpoint).replace(/\/+$/, "");
+  } catch (e) {}
+}
+discoverLane();
+setInterval(discoverLane, 60000);
 async function fetchSpeech() {
+  if (laneBase) {
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 2500);
+      const r = await fetch(laneBase + "/speech.json?cb=" + Date.now(), { signal: ctl.signal });
+      clearTimeout(t);
+      if (r.ok) { speechDoc = await r.json(); liveBase = laneBase + "/"; return speechDoc; }
+    } catch (e) {}
+  }
   try {
     const r = await fetch("speech.json?cb=" + Date.now());
     if (!r.ok) return speechDoc;
     speechDoc = await r.json();
+    liveBase = "";
     return speechDoc;
   } catch (e) { return speechDoc; }
 }
@@ -819,7 +849,7 @@ function roomEntries(name) {
   const out = [];
   for (const id of ids) {
     const it = (speechDoc.items || {})[id];
-    if (it && it.text) out.push({ file: "speech/" + id + ".mp3", text: it.text });
+    if (it && it.text) out.push({ file: liveBase + "speech/" + id + ".mp3", text: it.text });
   }
   return out.length ? out : null;
 }
@@ -838,6 +868,8 @@ function playAudioSeq(entries) {
 function pumpAudio() {
   if (audioPlaying || !audioQ.length) return;
   const en = audioQ.shift();
+  if (en.exp && Date.now() > en.exp) { setTimeout(pumpAudio, 50); return; }
+  // ^ one candle behind — dropped, never spoken as current
   audioPlaying = true;
   setNowReading(en.text);
   logLine(en.text, en.cls || "");
@@ -871,7 +903,9 @@ async function speechPoll() {
     const it = (doc.items || {})[id];
     if (!it || !it.text) continue;
     if (Date.now() - (it.at || 0) > 600000) continue; // never replay old cadence
-    audioQ.push({ file: "speech/" + id + ".mp3", text: it.text,
+    if (it.exp && Date.now() > it.exp) continue; // one candle behind — dropped
+    audioQ.push({ file: liveBase + "speech/" + id + ".mp3", text: it.text,
+                  exp: it.exp || 0,
                   cls: /^Temp /.test(it.text) ? "alert" : "" });
   }
   pumpAudio();
